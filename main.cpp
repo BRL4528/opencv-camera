@@ -2,14 +2,11 @@
 #include <iostream>
 
 int main() {
-    // GStreamer pipeline para o Jetson (adaptar se necessário)
-    std::string pipeline = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=1920, height=1080, framerate=30/1 ! nvvidconv ! video/x-raw, format=BGRx ! videoconvert ! video/x-raw, format=BGR ! appsink";
-
-    // Inicializa a captura com a pipeline GStreamer
-    cv::VideoCapture cap(pipeline, cv::CAP_GSTREAMER);
+    // Abre a câmera padrão (pode ser alterada para outro índice caso tenha múltiplas câmeras)
+    cv::VideoCapture cap(0);  // Tente "cv::VideoCapture cap(1);" se houver mais de uma câmera
 
     if (!cap.isOpened()) {
-        std::cerr << "Erro: Não foi possível abrir a câmera com GStreamer." << std::endl;
+        std::cerr << "Erro: Não foi possível abrir a câmera." << std::endl;
         return -1;
     }
 
@@ -18,8 +15,8 @@ int main() {
     int frame_height = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
     int fps = 30;
 
-    // Abre arquivo de saída
-    cv::VideoWriter video("output.mp4", cv::VideoWriter::fourcc('M', 'P', '4', 'V'), fps, cv::Size(frame_width, frame_height));
+    // Abre o arquivo de saída
+    cv::VideoWriter video("output_simple.mp4", cv::VideoWriter::fourcc('M', 'P', '4', 'V'), fps, cv::Size(frame_width, frame_height));
 
     if (!video.isOpened()) {
         std::cerr << "Erro: Não foi possível abrir o arquivo de saída para gravação." << std::endl;
@@ -29,10 +26,13 @@ int main() {
     cv::Mat frame;
     while (true) {
         cap >> frame;
-        if (frame.empty()) break;
+        if (frame.empty()) {
+            std::cerr << "Erro: Frame vazio, finalizando..." << std::endl;
+            break;
+        }
 
         // Exibe o vídeo ao vivo
-        cv::imshow("Câmera Jetson", frame);
+        cv::imshow("Câmera", frame);
 
         // Grava o frame no arquivo de vídeo
         video.write(frame);
@@ -43,7 +43,7 @@ int main() {
         }
     }
 
-    // Libera a câmera e fecha os arquivos
+    // Libera a câmera e fecha o arquivo de vídeo
     cap.release();
     video.release();
     cv::destroyAllWindows();
