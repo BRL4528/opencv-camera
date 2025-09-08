@@ -1,5 +1,8 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <ctime>
+
+// const std::string videoPath = "/home/jet/projects/opencv-camera/LostInTranslation.mp4";
 
 // Utility function to convert string format to FOURCC code
 int getFourCC(const std::string& format) {
@@ -11,6 +14,13 @@ int getFourCC(const std::string& format) {
         std::cerr << "Error: Unsupported format " << format << std::endl;
         return -1;
     }
+}
+
+std::string generateFilename() {
+    auto now = std::time(nullptr);
+    char buffer[100];
+    std::strftime(buffer, sizeof(buffer), "video_%Y-%m-%d_%H-%M-%S.avi", std::localtime(&now));
+    return std::string(buffer);
 }
 
 void apply_camera_setting(const std::string& command, const std::string& error_message) {
@@ -47,14 +57,17 @@ int main() {
     // Set camera parameters
     cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-    cap.set(cv::CAP_PROP_FPS, 30);
+    cap.set(cv::CAP_PROP_FPS, 60);
 
     // Apply camera settings using v4l2-ctl
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=brightness=128", "Failed to set brightness.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=contrast=128", "Failed to set contrast.");
+    // apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=contrast=30", "Failed to set contrast.");
+    // apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=saturation=0", "Failed to set saturation.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=saturation=128", "Failed to set saturation.");
-    apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_automatic=1", "Failed to set white balance automatic.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=gain=0", "Failed to set gain.");
+    
+    apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_automatic=1", "Failed to set white balance automatic.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=power_line_frequency=2", "Failed to set power line frequency.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=sharpness=128", "Failed to set sharpness.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=backlight_compensation=1", "Failed to set backlight compensation.");
@@ -62,11 +75,11 @@ int main() {
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=exposure_dynamic_framerate=0", "Failed to set exposure dynamic framerate.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=pan_absolute=0", "Failed to set pan absolute.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=tilt_absolute=0", "Failed to set tilt absolute.");
-    apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=focus_automatic_continuous=1", "Failed to set focus automatic continuous.");
+    apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=focus_automatic_continuous=0", "Failed to set focus automatic continuous.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=zoom_absolute=100", "Failed to set zoom absolute.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=led1_mode=3", "Failed to set LED1 mode.");
     apply_camera_setting("v4l2-ctl -d /dev/video0 --set-ctrl=led1_frequency=0", "Failed to set LED1 frequency.");
-
+    
     // Verify format, parameters, and FPS
     char format_str[5];
     int fourcc_code = static_cast<int>(cap.get(cv::CAP_PROP_FOURCC));
@@ -89,7 +102,7 @@ int main() {
     std::cout << "FPS: " << cap.get(cv::CAP_PROP_FPS) << std::endl;
 
     // Create a window to display the webcam feed
-    cv::namedWindow("Webcam Feed", cv::WINDOW_AUTOSIZE);
+    // cv::namedWindow("Webcam Feed", cv::WINDOW_AUTOSIZE);
 
     cv::VideoWriter videoWriter;
     bool recording = false;
@@ -106,17 +119,17 @@ int main() {
             break;
         }
 
-        cv::imshow("Webcam Feed", frame);  // Display the frame
+        // cv::imshow("Webcam Feed", frame);  // Display the frame
 
-        char key = static_cast<char>(cv::waitKey(1));  // 1 ms wait for keypress
+        // char key = static_cast<char>(cv::waitKey(1));  // 1 ms wait for keypress
 
-        if (key == 'q') {
-            break;  // Exit the loop if the user presses 'q'
-        } else if (key == 's') {
-            if (!recording) {
-                // Start recording
-                std::string filename = "output.mp4";
-                int codec = cv::VideoWriter::fourcc('H', '2', '6', '4');
+        // if (key == 'q') {
+        //     break;  // Exit the loop if the user presses 'q'
+        // } else if (key == 's') {
+        if (!recording) {
+        //         // Start recording
+                std::string filename = generateFilename();
+                int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
                 cv::Size frameSize(static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH)),
                                    static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT)));
 
@@ -128,13 +141,13 @@ int main() {
                     std::cout << "Recording started..." << std::endl;
                     recording = true;
                 }
-            } else {
-                // Stop recording
-                videoWriter.release();
-                std::cout << "Recording stopped and saved." << std::endl;
-                recording = false;
-            }
-        }
+        //     } else {
+        //         // Stop recording
+        //         videoWriter.release();
+        //         std::cout << "Recording stopped and saved." << std::endl;
+        //         recording = false;
+          }
+        // }
 
         if (recording) {
             videoWriter.write(frame);  // Write the frame to the video file
@@ -150,9 +163,9 @@ int main() {
     }
 
     // Release the capture and video writer, and destroy the window
-    cap.release();
     videoWriter.release();
-   cv::destroyAllWindows();
+    cap.release();
+    cv::destroyAllWindows();
 
     return 0;
 }
